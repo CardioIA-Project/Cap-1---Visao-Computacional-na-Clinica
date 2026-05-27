@@ -94,3 +94,7 @@ out/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+dataset/*
+!dataset/.gitkeep
+dataset_processado/*
