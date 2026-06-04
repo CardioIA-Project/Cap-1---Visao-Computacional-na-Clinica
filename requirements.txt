@@ -2,4 +2,10 @@ opencv-python
 scikit-learn
 numpy
 pandas
-pathlib
+matplotlib
+seaborn
+tensorflow
+torch
+torchvision
+torchaudio
+jupyter
