@@ -1,48 +1,38 @@
-# Relatório Técnico: Pipeline de Visão Computacional para Análise de Raio-X de Tórax
+# Relatório Técnico: Pré-processamento e Organização das Imagens
 
-## 1. Escolha do Dataset
+## 1. Introdução e Escolha do Dataset
+Para o desenvolvimento do protótipo do Assistente Cardiológico Virtual, foi selecionado o dataset público **Chest X-Ray Images (Pneumonia)**, disponibilizado no Kaggle. Este conjunto de dados contém imagens de raio-X do tórax divididas em duas classes principais: `NORMAL` (pacientes saudáveis) e `PNEUMONIA` (pacientes diagnosticados com pneumonia).
 
-### 1.1. Descrição do Conjunto de Dados
-O dataset utilizado para este projeto é composto por imagens de Raio-X de tórax (Chest X-Ray), organizado nas pastas tradicionais e dividido por classes (por exemplo, `NORMAL` e possivelmente `PNEUMONIA`). 
+A escolha desse dataset baseia-se na sua relevância clínica e na clareza dos padrões visuais, o que o torna ideal para a aplicação de redes neurais convolucionais (CNNs) no diagnóstico por imagem.
 
-### 1.2. Justificativa da Escolha
-A principal justificativa para a adoção deste conjunto de dados — conforme premissa do projeto — é **por ser um dataset de tamanho reduzido (pequeno)**. As vantagens associadas a essa escolha incluem:
-* **Rapidez na Iteração:** Um volume menor de dados permite prototipagem rápida, testes ágeis de arquiteturas e redução do tempo de treinamento de modelos.
-* **Acessibilidade Computacional:** Pode ser facilmente manipulado, carregado em memória e treinado sem a necessidade de infraestruturas robustas de hardware (como múltiplos nós de GPU).
-* **Prova de Conceito (PoC):** Ideal para o desenvolvimento inicial e validação da pipeline de visão computacional na prática clínica antes do escalonamento para bases de dados maiores.
+## 2. Análise Exploratória e Desbalanceamento das Classes
+Durante a coleta e unificação inicial das imagens, foi possível constatar uma assimetria significativa na distribuição das classes, caracterizando o dataset como **altamente desbalanceado**.
+A distribuição original encontrada foi a seguinte:
+- **NORMAL**: 1.583 imagens
+- **PNEUMONIA**: 4.273 imagens
 
----
+O desbalanceamento (com a classe de pneumonia sendo majoritária) é comum em datasets médicos do "mundo real". Essa característica exigiu atenção na etapa de modelagem, motivando o uso de métricas como *Precision*, *Recall*, *F1-Score* e *Matriz de Confusão* para a correta avaliação do modelo, visto que olhar apenas para a acurácia poderia gerar conclusões enganosas (o modelo poderia, por exemplo, prever sempre "pneumonia" e ainda assim obter alta acurácia). Além disso, técnicas de *Data Augmentation* (aumento de dados) foram aplicadas posteriormente no conjunto de treinamento para suavizar esse viés e melhorar a capacidade de generalização do modelo.
 
-## 2. Pipeline de Preparação e Pré-processamento
+## 3. Etapas de Pré-processamento Aplicadas
 
-A pipeline de pré-processamento estabelecida no `preprocessing.ipynb` aplica transformações padrão de Visão Computacional necessárias para a entrada em Redes Neurais Convolucionais (CNNs).
+As imagens originais encontram-se em diferentes resoluções e precisaram passar por um *pipeline* de padronização antes de serem fornecidas à CNN. Foram aplicadas as seguintes técnicas:
 
-### 2.1. Etapas do Pré-processamento e Justificativas Técnicas
+### 3.1. Leitura e Conversão de Formato (RGB)
+As imagens foram carregadas usando a biblioteca OpenCV (`cv2.imread`). Em seguida, foram convertidas do padrão padrão BGR do OpenCV para o formato padrão **RGB** (`cv2.cvtColor`). Isso garante a compatibilidade das imagens com as redes neurais pré-treinadas (como a ResNet50 e a VGG16) e bibliotecas de visualização gráfica.
 
-1. **Leitura e Conversão de Cores (OpenCV):**
-   * **Processo:** As imagens são lidas do disco utilizando `cv2.imread()` e posteriormente convertidas com `cv2.cvtColor(img, cv2.COLOR_BGR2RGB)`.
-   * **Justificativa:** O OpenCV, por padrão, lê as imagens no formato BGR (Blue-Green-Red). A maioria dos frameworks de deep learning (como PyTorch e TensorFlow/Keras) e bibliotecas de visualização (como Matplotlib) esperam o formato RGB. Essa conversão garante que os canais de cores sejam interpretados corretamente.
+### 3.2. Redimensionamento (*Resizing*)
+A arquitetura de redes neurais profundas, especialmente as arquiteturas adotadas em *Transfer Learning* (ex: ResNet50 e VGG16), exige imagens em um tamanho de entrada específico e uniforme. Sendo assim, todas as imagens foram redimensionadas para as dimensões de **224x224 pixels**. Essa resolução padronizada balanceia a riqueza de detalhes e a eficiência computacional necessária para o treinamento em recursos limitados.
 
-2. **Redimensionamento (Resizing - 224x224):**
-   * **Processo:** As imagens são redimensionadas para as dimensões exatas de `(224, 224)` pixels.
-   * **Justificativa:** A dimensão 224x224 é um padrão na indústria (estabelecido pela arquitetura VGG e mantido pelo ResNet, MobileNet, entre outros) e é o formato esperado caso decida-se aplicar *Transfer Learning* com modelos pré-treinados no ImageNet. Além disso, a padronização resolve o problema de variação nas dimensões originais dos raios-X, já que os algoritmos de deep learning geralmente exigem que os tensores de entrada tenham tamanho fixo.
+### 3.3. Normalização
+Na etapa de geração dos dados em lotes (usando o `ImageDataGenerator` do TensorFlow), foi aplicado o *rescaling* com o fator **1.0 / 255**. Isso normaliza o valor numérico dos pixels de uma escala de 0 a 255 para o intervalo de **0 a 1**. A normalização é fundamental em redes neurais para garantir maior estabilidade numérica, convergência mais rápida da rede e mitigar problemas de exploração do gradiente, permitindo que a CNN extraia características de maneira eficaz.
 
-3. **Normalização (Scaling):**
-   * **Processo:** As imagens, cujos valores de pixel variam originalmente de 0 a 255, são divididas por 255.0 (`img_resized / 255.0`), escalando-as para o intervalo `[0, 1]`.
-   * **Justificativa:** Normalizar os dados é crucial para a estabilidade e velocidade do treinamento de redes neurais. Manter os valores numa escala pequena impede gradientes muito grandes ou instáveis (vanishing/exploding gradients) e ajuda otimizadores (como Adam e SGD) a convergirem mais rápido para o mínimo global.
+## 4. Divisão do Conjunto de Dados (*Split*)
+O formato original em que o dataset do Kaggle é fornecido não possuía uma divisão de validação bem distribuída. Por este motivo, as imagens de todas as subpastas (`train`, `val` e `test`) foram unificadas temporariamente e, logo em seguida, **re-divididas** de forma consolidada e estatisticamente robusta usando a biblioteca `scikit-learn` (`train_test_split`). 
 
----
+A distribuição final escolhida seguiu a proporção:
+- **Treino (70%)**: Conjunto principal onde a CNN ajustará seus pesos, contemplando dados suficientes para a convergência.
+- **Validação (15%)**: Usado durante as épocas de treinamento para monitorar o desempenho e aplicar técnicas de parada antecipada (*Early Stopping*), evitando sobreajuste (*overfitting*).
+- **Teste (15%)**: Conjunto reservado e inédito, não acessível à rede durante o treino ou validação, utilizado para validar o desempenho final do protótipo no mundo real e gerar as métricas de eficácia.
 
-## 3. Estratégia de Divisão dos Dados
-
-### 3.1. Estrutura de Diretórios e Particionamento
-Com base nos imports (`train_test_split`) e na estrutura observada (`dataset/archive/chest_xray/train/NORMAL`), a estratégia de particionamento utiliza a técnica de particionamento por diretórios combinada com a aleatorização por código.
-
-* **Divisão de Pastas (Base):** O dataset já provê partições físicas nativas, observadas na pasta `train` (comumente acompanhada de pastas como `test` e/ou `val`). Essa divisão estática permite manter consistência (benchmarking fixo) durante a avaliação.
-* **Uso do `train_test_split` (scikit-learn):** A importação dessa ferramenta sugere uma intenção de redividir dinamicamente partes do dataset. 
-
-### 3.2. Justificativa Técnica da Divisão
-* **Prevenção de Data Leakage:** Manter os subconjuntos de Treino, Validação e Teste rigorosamente separados garante que o modelo não observe nenhuma informação de teste durante a fase de aprendizagem. 
-* **Treino:** Usado para ajuste de pesos e retropropagação.
-* **Validação (via train_test_split):** Utilizado durante o treinamento para monitorar *overfitting* e realizar o ajuste fino dos hiperparâmetros (como *learning rate* ou número de épocas) de forma imparcial.
-* **Teste:** Mantido inalterado e oculto até o momento da avaliação final para aferir a capacidade real de generalização da máquina em dados da clínica que nunca foram vistos antes.
+## 5. Conclusão
+O *pipeline* de pré-processamento estruturou as imagens em conformidade plena com os requisitos ideais para a ingestão e treinamento de modelos baseados em Visão Computacional. O mapeamento do desbalanceamento da classe orientará o rigor da avaliação e do acompanhamento das métricas na próxima fase, conferindo assim, alta confiabilidade e responsabilidade na elaboração de um Assistente Cardiológico Virtual seguro.
