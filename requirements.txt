@@ -4,7 +4,10 @@ numpy
 pandas
 matplotlib
 seaborn
-torch==2.5.1+cu121
-torchvision==0.22.1+cu121
-torchaudio==2.5.1+cu121
+torch==2.11.0
+torchvision==0.26.0
+torchaudio==2.11.0
 jupyter
+flask
+flask-cors
+pillow
