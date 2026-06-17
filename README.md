@@ -68,7 +68,7 @@ Os resultados demonstraram que a estratégia baseada em Transfer Learning aprese
 
 Assista à demonstração completa do aplicativo em funcionamento:
 
-[![Assista ao vídeo](assets/thumb-video.png)](LINK_DO_VIDEO)
+[![Assista ao vídeo](assets/thumb-video.png)](https://youtu.be/OJVD0r-TtBU)
 
 Ou acesse diretamente:
 
